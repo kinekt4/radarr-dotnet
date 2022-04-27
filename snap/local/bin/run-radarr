@@ -1,0 +1,3 @@
+#!/bin/bash -xe
+
+"$SNAP/radarr-dotnet/Radarr" -nobrowser -data="$SNAP_COMMON"
