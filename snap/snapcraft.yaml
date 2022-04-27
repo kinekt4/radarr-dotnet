@@ -1,0 +1,82 @@
+name: radarr-dotnet # you probably want to 'snapcraft register <name>'
+summary: Radarr is a movie collection manager for Usenet and BitTorrent users. # 79 char long summary
+description: |
+  Radarr is a movie collection manager for Usenet and BitTorrent users. 
+  It can monitor multiple RSS feeds for new movies and will interface with 
+  clients and indexers to grab, sort, and rename them. It can also be configured 
+  to automatically upgrade the quality of existing files in the library when a 
+  better quality format becomes available.
+
+  The web interface is accessible by default at http://localhost:7878
+
+  See https://radarr.video for more details.
+
+confinement: strict # use 'strict' once you have the right plugs and slots
+license: GPL-3.0+
+icon: icon.svg
+base: core20
+grade: stable
+adopt-info: set-version
+
+package-repositories:
+  - type: apt
+    url: https://packages.microsoft.com/ubuntu/20.04/prod
+    components: [main]
+    suites: [focal]
+    key-id: BC528686B50D79E339D3721CEB3E94ADBE1229CF
+
+apps:
+  radarr:
+    command: bin/run-radarr
+    daemon: simple
+    plugs:
+      - home
+      - mount-observe
+      - network
+      - network-bind
+      - removable-media
+    stop-timeout: 30s
+
+parts:
+
+  local:
+    plugin: dump
+    source: snap/local
+
+  set-version:
+    plugin: nil
+    override-pull:
+      curl -sLG "https://radarr.servarr.com/v1/update/master/changes?os=linux&runtime=netcore&arch=x64" --output changes.json
+    override-build: |
+      snapcraftctl set-version "$(jq -r .[0].version changes.json)"
+    build-packages:
+      - curl
+      - jq
+
+  radarr:
+    plugin: nil
+    source: 'https://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64'
+    source-type: tar
+    override-build: |
+      INST_DIR="$SNAPCRAFT_PART_INSTALL/radarr-dotnet"
+      mkdir -p "$INST_DIR"
+      cp -a * "$INST_DIR"
+
+  deps:
+    plugin: dump
+    source: .
+    stage-packages:
+      - curl
+      - mediainfo
+      - sqlite3
+      - apt-transport-https
+      - dotnet-sdk-6.0
+    filesets:
+      bins:
+        - usr/bin/sqlite*
+      libs:
+        - usr/lib
+    stage:
+      - $bins
+      - $libs
+
